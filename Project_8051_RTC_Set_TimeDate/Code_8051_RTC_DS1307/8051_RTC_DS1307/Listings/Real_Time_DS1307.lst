@@ -1,0 +1,281 @@
+C51 COMPILER V9.60.7.0   REAL_TIME_DS1307                                                  06/17/2025 13:46:20 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE REAL_TIME_DS1307
+OBJECT MODULE PLACED IN .\Objects\Real_Time_DS1307.obj
+COMPILER INVOKED BY: D:\Program_Store\Application\KeilC\C51\BIN\C51.EXE Real_Time_DS1307.c OPTIMIZE(8,SPEED) BROWSE DEBU
+                    -G OBJECTEXTEND PRINT(.\Listings\Real_Time_DS1307.lst) TABS(2) OBJECT(.\Objects\Real_Time_DS1307.obj)
+
+line level    source
+
+   1          #include <REGX51.H>
+   2          #include <Real_Time_DS1307.H>
+   3          
+   4          #define SCL P1_0
+   5          #define SDA P1_1
+   6          
+   7          void Delay() {}
+   8          
+   9          bit Soft_I2c_Get_Ack();
+  10          void Soft_I2c_Ack();
+  11          void Soft_I2c_Nak();
+  12          
+  13          void I2C_Init()
+  14          {
+  15   1        SCL=1;
+  16   1        SDA=1;
+  17   1      }
+  18          void I2C_Start()
+  19          {
+  20   1        SCL = 1;  Delay();
+  21   1        SDA = 0;  Delay();
+  22   1        SCL = 0;
+  23   1      }
+  24          bit I2C_Get_Ack()
+  25          {
+  26   1        bit result;
+  27   1        SDA = 1;  Delay();
+  28   1        SCL = 1;  Delay();
+  29   1        result = SDA;
+  30   1        SCL = 0;
+  31   1        return result;
+  32   1      }
+  33          bit I2C_Write(unsigned char dat)
+  34          {
+  35   1        unsigned char i;
+  36   1        for(i=0;i<8;i++)
+  37   1        {
+  38   2          SDA = (bit)(dat&0x80);  
+  39   2          SCL = 1;  Delay();
+  40   2          SCL = 0;
+  41   2          dat<<=1;
+  42   2        }
+  43   1        return(I2C_Get_Ack());
+  44   1      }
+  45          void I2C_Ack()
+  46          {
+  47   1        SDA = 0;  Delay();
+  48   1        SCL = 1;  Delay();
+  49   1        SCL = 0;
+  50   1      }
+  51          void I2C_Nak()
+  52          {
+  53   1        SDA = 1;  Delay();
+  54   1        SCL = 1;  Delay();
+C51 COMPILER V9.60.7.0   REAL_TIME_DS1307                                                  06/17/2025 13:46:20 PAGE 2   
+
+  55   1        SCL = 0;
+  56   1      }
+  57          unsigned char I2C_Read(bit ack)
+  58          {
+  59   1        unsigned char i, dat=0;
+  60   1        for(i=0;i<8;i++)
+  61   1        {
+  62   2          SDA = 1;  Delay();
+  63   2          SCL = 1;  Delay();
+  64   2          dat <<= 1;
+  65   2          if(SDA)
+  66   2          {
+  67   3            dat |= 0x01;
+  68   3          }
+  69   2          SCL = 0;
+  70   2        }
+  71   1        if(ack)
+  72   1        {
+  73   2          I2C_Ack();
+  74   2        }
+  75   1        else
+  76   1        {
+  77   2          I2C_Nak();
+  78   2        }
+  79   1        return dat;
+  80   1      }
+  81          void I2C_Stop()
+  82          {   
+  83   1        SDA = 0;  Delay();
+  84   1        SCL = 1;  Delay();
+  85   1        SDA = 1;
+  86   1      }
+  87          void DS1307_Write(unsigned char add, unsigned char dat)
+  88          {
+  89   1        I2C_Start();
+  90   1        I2C_Write(0xD0);
+  91   1        I2C_Write(add); 
+  92   1        I2C_Write(dat); 
+  93   1        I2C_Stop();
+  94   1      }
+  95          unsigned char DS1307_Read(unsigned char add)
+  96          {
+  97   1        unsigned char dat;
+  98   1        I2C_Start();
+  99   1        I2C_Write(0xD0); 
+ 100   1        I2C_Write(add);
+ 101   1        I2C_Start(); 
+ 102   1        I2C_Write(0xD1); 
+ 103   1        dat = I2C_Read(0);
+ 104   1        I2C_Stop();
+ 105   1        return dat;
+ 106   1      }
+ 107          void DS1307_Init()
+ 108          {
+ 109   1        unsigned char tmp;
+ 110   1        I2C_Init();
+ 111   1        
+ 112   1        tmp = DS1307_Read(0x00);
+ 113   1        tmp &= 0x7F;
+ 114   1        DS1307_Write(0x00,tmp);   
+ 115   1      }
+ 116          bit DS1307_Read_Time(unsigned int * hour, unsigned int * minute, unsigned int * second)
+C51 COMPILER V9.60.7.0   REAL_TIME_DS1307                                                  06/17/2025 13:46:20 PAGE 3   
+
+ 117          {
+ 118   1        unsigned int h_tmp, m_tmp, s_tmp, *mode;
+ 119   1        bit am_pm;
+ 120   1        I2C_Start();
+ 121   1        I2C_Write(0xD0); 
+ 122   1        I2C_Write(0x00);
+ 123   1        I2C_Start(); 
+ 124   1        I2C_Write(0xD1); 
+ 125   1        s_tmp = I2C_Read(1);
+ 126   1        m_tmp = I2C_Read(1);
+ 127   1        h_tmp = I2C_Read(0);
+ 128   1        I2C_Stop();
+ 129   1      
+ 130   1        s_tmp &= 0x7F;
+ 131   1        *second = (s_tmp>>4)*10+(s_tmp&0x0F);
+ 132   1        m_tmp &= 0x7F;
+ 133   1        *minute = (m_tmp>>4)*10+(m_tmp&0x0F);
+ 134   1      
+ 135   1        if(h_tmp & 0x40)    // Mode 12h
+ 136   1        {
+ 137   2          *mode = 12;
+ 138   2          if(h_tmp & 0x20)
+ 139   2          {
+ 140   3            am_pm = 1;    // PM
+ 141   3          }
+ 142   2          else
+ 143   2          {
+ 144   3            am_pm = 0;
+ 145   3          }
+ 146   2          h_tmp &= 0x1F;
+ 147   2          *hour = (h_tmp>>4)*10+(h_tmp&0x0F);
+ 148   2        }
+ 149   1        else
+ 150   1        {
+ 151   2          *mode = 24;
+ 152   2          h_tmp &= 0x3F;
+ 153   2          *hour = (h_tmp>>4)*10+(h_tmp&0x0F);
+ 154   2          if(*hour<12)
+ 155   2          {
+ 156   3            am_pm = 0;    // AM
+ 157   3          }
+ 158   2          else
+ 159   2          {
+ 160   3            am_pm = 1;
+ 161   3          }
+ 162   2        } 
+ 163   1        return am_pm;
+ 164   1      }
+ 165          void DS1307_Write_Time(unsigned int hour, unsigned int minute, unsigned int second)
+ 166          {
+*** WARNING C235 IN LINE 166 OF Real_Time_DS1307.c: parameter 1: different types
+*** WARNING C235 IN LINE 166 OF Real_Time_DS1307.c: parameter 2: different types
+*** WARNING C235 IN LINE 166 OF Real_Time_DS1307.c: parameter 3: different types
+ 167   1        second = ((second/10)<<4)|(second%10);
+ 168   1        minute = ((minute/10)<<4)|(minute%10);
+ 169   1        hour   = ((hour  /10)<<4)|(hour  %10);
+ 170   1      
+ 171   1        I2C_Start();
+ 172   1        I2C_Write(0xD0);
+ 173   1        I2C_Write(0x00); 
+ 174   1        I2C_Write(second); 
+ 175   1        I2C_Write(minute);
+C51 COMPILER V9.60.7.0   REAL_TIME_DS1307                                                  06/17/2025 13:46:20 PAGE 4   
+
+ 176   1        I2C_Write(hour);
+ 177   1        I2C_Stop();
+ 178   1      }
+ 179          
+ 180          void DS1307_Read_Date(unsigned int * day, unsigned int * date, 
+ 181                                unsigned int * month, unsigned int * year)
+ 182          {
+ 183   1        I2C_Start();
+ 184   1        I2C_Write(0xD0); 
+ 185   1        I2C_Write(0x03);
+ 186   1        I2C_Start(); 
+ 187   1        I2C_Write(0xD1);
+ 188   1        *day  = I2C_Read(1);
+ 189   1        *date = I2C_Read(1);
+ 190   1        *month= I2C_Read(1);
+ 191   1        *year = I2C_Read(0);
+ 192   1        I2C_Stop();
+ 193   1        *day &= 0x07;
+ 194   1        *date &= 0x3F;
+ 195   1        *date = (*date>>4)*10 + (*date & 0x0F);
+ 196   1        *month &= 0x1F;
+ 197   1        *month = (*month>>4)*10 + (*month & 0x0F);
+ 198   1        *year = (*year>>4)*10 + (*year & 0x0F);
+ 199   1      }
+ 200          void DS1307_Write_Date(unsigned char day, unsigned char date, 
+ 201                                 unsigned char month, unsigned char year)
+ 202          {
+ 203   1        date  = ((date/10)<<4)  | (date%10);
+ 204   1        month   = ((month/10)<<4) | (month%10);
+ 205   1        year  = ((year/10)<<4)  | (year%10);
+ 206   1        if(day<=1 || day>= 8) day = 1; 
+ 207   1        else day = day;
+ 208   1        I2C_Start();
+ 209   1        I2C_Write(0xD0);
+ 210   1        I2C_Write(0x03); 
+ 211   1        I2C_Write(day); 
+ 212   1        I2C_Write(date);
+ 213   1        I2C_Write(month);
+ 214   1        I2C_Write(year);
+ 215   1        I2C_Stop();
+ 216   1      }
+ 217          void DS1307_Write_Bytes(unsigned char add, unsigned char * buff,  unsigned char len)
+ 218          {
+ 219   1        unsigned char i=0;
+ 220   1      
+ 221   1        I2C_Start();
+ 222   1        I2C_Write(0xD0);
+ 223   1        I2C_Write(add);
+ 224   1        for(i=0;i<len;i++)
+ 225   1        {    
+ 226   2          I2C_Write(buff[i]); 
+ 227   2        } 
+ 228   1        I2C_Stop();
+ 229   1      }
+ 230          void DS137_Read_Bytes(unsigned char add,unsigned char * buff,
+ 231            unsigned char len)
+ 232          {
+ 233   1        unsigned char i;
+ 234   1      
+ 235   1        I2C_Start();
+ 236   1        I2C_Write(0xD0); 
+ 237   1        I2C_Write(add);
+C51 COMPILER V9.60.7.0   REAL_TIME_DS1307                                                  06/17/2025 13:46:20 PAGE 5   
+
+ 238   1        I2C_Start();
+ 239   1        I2C_Write(0xD1);
+ 240   1        for(i=0;i<len-1;i++)
+ 241   1        { 
+ 242   2          buff[i]  = I2C_Read(1);
+ 243   2        }
+ 244   1        buff[i]  = I2C_Read(0);
+ 245   1        I2C_Stop();
+ 246   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1178    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      46
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       3
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  3 WARNING(S),  0 ERROR(S)

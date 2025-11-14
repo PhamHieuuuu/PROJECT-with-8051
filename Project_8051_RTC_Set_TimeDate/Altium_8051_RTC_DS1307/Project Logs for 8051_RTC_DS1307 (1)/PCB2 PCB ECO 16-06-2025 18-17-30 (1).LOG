@@ -1,0 +1,9 @@
+Added Pin To Net: NetName=GND Pin=JP1-2
+Added Pin To Net: NetName=VCC Pin=JP1-3
+Added Pin To Net: NetName=SCL Pin=IC1-1
+Added Pin To Net: NetName=SCL Pin=JP1-5
+Added Net: Name=SCL
+Added Pin To Net: NetName=SDA Pin=IC1-2
+Added Pin To Net: NetName=SDA Pin=JP1-4
+Added Net: Name=SDA
+Added Room: Name=Sheet2

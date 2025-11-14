@@ -1,0 +1,187 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2025 13:46:20 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Program_Store\Application\KeilC\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTE
+                    -ND PRINT(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <REGX51.H>
+   2          #include <Thu_Vien_LCD.H>
+   3          #include <Real_Time_DS1307.H>
+   4          
+   5          // Dinh nghia chan nut
+   6          sbit SET = P3^0;
+   7          sbit UP = P3^1;
+   8          sbit DOWN = P3^2;
+   9          
+  10          // Bien thoi gian va trang thai
+  11          unsigned int Hour, Minute, Second, Mode, Day, Date, Month, Year;
+  12          unsigned char edit_mode = 0;         // 0: xem binh thuong, 1: chinh sua
+  13          unsigned char selected_field = 255;  // khoi dau = 255 de SET lan dau vao chinh Hour
+  14          
+  15          // Delay don gian
+  16          void delay(long time)
+  17          {
+  18   1        time = time * 25;
+  19   1        while(time--);
+  20   1      }
+  21          
+  22          // Xu ly nut nhan
+  23          void CheckButtons()
+  24          {
+  25   1        if (SET == 0)
+  26   1        {
+  27   2          delay(200);
+  28   2          while (SET == 0); // cho nha phim
+  29   2      
+  30   2          selected_field++;
+  31   2          if (selected_field > 6)
+  32   2          {
+  33   3            selected_field = 255;  // quay lai che do xem thuong
+  34   3            edit_mode = 0;
+  35   3      
+  36   3            // Ghi lai thoi gian va ngay thang vao DS1307
+  37   3            DS1307_Write_Time(Hour, Minute, Second);
+  38   3            DS1307_Write_Date(Day, Date, Month, Year);
+  39   3          }
+  40   2          else
+  41   2          {
+  42   3            edit_mode = 1;
+  43   3          }
+  44   2        }
+  45   1      
+  46   1        if (edit_mode)
+  47   1        {
+  48   2          if (UP == 0)
+  49   2          {
+  50   3            delay(200);
+  51   3            while (UP == 0);
+  52   3            switch (selected_field)
+  53   3            {
+  54   4              case 0: Hour = (Hour + 1) % 24; break;
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2025 13:46:20 PAGE 2   
+
+  55   4              case 1: Minute = (Minute + 1) % 60; break;
+  56   4              case 2: Second = (Second + 1) % 60; break;
+  57   4              case 3: Day = (Day % 7) + 1; break;
+  58   4              case 4: Date = (Date < 31) ? Date + 1 : 1; break;
+  59   4              case 5: Month = (Month < 12) ? Month + 1 : 1; break;
+  60   4              case 6: Year = (Year < 99) ? Year + 1 : 0; break;
+  61   4            }
+  62   3          }
+  63   2      
+  64   2          if (DOWN == 0)
+  65   2          {
+  66   3            delay(200);
+  67   3            while (DOWN == 0);
+  68   3            switch (selected_field)
+  69   3            {
+  70   4              case 0: Hour = (Hour > 0) ? Hour - 1 : 23; break;
+  71   4              case 1: Minute = (Minute > 0) ? Minute - 1 : 59; break;
+  72   4              case 2: Second = (Second > 0) ? Second - 1 : 59; break;
+  73   4              case 3: Day = (Day > 1) ? Day - 1 : 7; break;
+  74   4              case 4: Date = (Date > 1) ? Date - 1 : 31; break;
+  75   4              case 5: Month = (Month > 1) ? Month - 1 : 12; break;
+  76   4              case 6: Year = (Year > 0) ? Year - 1 : 99; break;
+  77   4            }
+  78   3          }
+  79   2        }
+  80   1      }
+  81          
+  82          void LCD_PutNumber2Digits(unsigned char val) {
+  83   1          if (val < 10) LCD_PutChar('0');
+  84   1          LCD_PutNumber(val);
+  85   1      }
+  86          
+  87          // Hien thi thoi gian
+  88          void Display_Time()
+  89          {
+  90   1        LCD_Gotoxy(4,0);
+  91   1      
+  92   1        if(selected_field == 0 && edit_mode) LCD_Puts("[");
+  93   1        LCD_PutNumber2Digits(Hour);
+  94   1        if(selected_field == 0 && edit_mode) LCD_Puts("]");
+  95   1        LCD_Puts(":");
+  96   1      
+  97   1        if(selected_field == 1 && edit_mode) LCD_Puts("[");
+  98   1        LCD_PutNumber2Digits(Minute);
+  99   1        if(selected_field == 1 && edit_mode) LCD_Puts("]");
+ 100   1        LCD_Puts(":");
+ 101   1      
+ 102   1        if(selected_field == 2 && edit_mode) LCD_Puts("[");
+ 103   1        LCD_PutNumber2Digits(Second);
+ 104   1        if(Second < 100) LCD_PutChar(' ');  // xoa ky tu cu neu tung la 3 chu so
+ 105   1        if(selected_field == 2 && edit_mode) LCD_Puts("]");
+ 106   1        LCD_Puts("     "); 
+ 107   1      }
+ 108          
+ 109          // Hien thi ngay thang
+ 110          void Display_Date()
+ 111          {
+ 112   1        LCD_Gotoxy(2, 1);
+ 113   1      
+ 114   1        if (selected_field == 3 && edit_mode) LCD_Puts("[");
+ 115   1        if (Day == 1) LCD_Puts("CN ");
+ 116   1        else { LCD_Puts("T"); LCD_PutNumber(Day); LCD_Puts(" "); }
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2025 13:46:20 PAGE 3   
+
+ 117   1        if (selected_field == 3 && edit_mode) LCD_Puts("]");
+ 118   1      
+ 119   1        if (selected_field == 4 && edit_mode) LCD_Puts("[");
+ 120   1        if (Date < 10) LCD_PutNumber(0);
+ 121   1        LCD_PutNumber(Date);
+ 122   1        if (selected_field == 4 && edit_mode) LCD_Puts("]");
+ 123   1        LCD_Puts("-");
+ 124   1      
+ 125   1        if (selected_field == 5 && edit_mode) LCD_Puts("[");
+ 126   1        if (Month < 10) LCD_PutNumber(0);
+ 127   1        LCD_PutNumber(Month);
+ 128   1        if (selected_field == 5 && edit_mode) LCD_Puts("]");
+ 129   1        LCD_Puts("-");
+ 130   1      
+ 131   1        if (selected_field == 6 && edit_mode) LCD_PutChar('[');
+ 132   1        LCD_PutNumber2Digits(Year);  // chi 2 so cuoi
+ 133   1        LCD_PutChar(' '); // xoa ky tu rac
+ 134   1        if (selected_field == 6 && edit_mode) LCD_PutChar(']');
+ 135   1        else LCD_PutChar(' ');
+ 136   1        LCD_Puts("     "); 
+ 137   1      }
+ 138          
+ 139          void main()
+ 140          {
+ 141   1        DS1307_Init();
+ 142   1        LCD_Init();
+ 143   1      
+ 144   1        while (1)
+ 145   1        {
+ 146   2          CheckButtons();
+ 147   2      
+ 148   2          if (!edit_mode)
+ 149   2          {
+ 150   3            DS1307_Read_Time(&Hour, &Minute, &Second);
+ 151   3            DS1307_Read_Date(&Day, &Date, &Month, &Year);
+ 152   3          }
+ 153   2      
+ 154   2          //LCD_Clear();
+ 155   2          Display_Time();
+ 156   2          Display_Date();
+ 157   2          //delay(500); // delay hien thi (~ nua giay)
+ 158   2        }
+ 159   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1156    ----
+   CONSTANT SIZE    =     22    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     18       5
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
